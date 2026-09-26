@@ -1,0 +1,163 @@
+:root {
+  --el-color-primary: #795548;
+  --el-color-primary-light-3: #a1887f;
+  --el-color-primary-light-5: #bcaaa4;
+  --el-color-primary-light-7: #d7ccc8;
+  --el-color-primary-light-8: #efebe9;
+  --el-color-primary-light-9: #f7f4f2;
+  --el-color-primary-dark-2: #5d4037;
+
+  --recy-bg: #f4f1ed;
+  --recy-panel: #ffffff;
+  --recy-ink: #3e2723;
+  --recy-ink-soft: #8d7b73;
+  --recy-line: #e4dbd5;
+  --recy-money: #bf360c;
+  --recy-in: #00897b;
+  --recy-out: #c62828;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "PingFang SC", "Microsoft YaHei", Helvetica, Arial, sans-serif;
+  background: var(--recy-bg);
+  color: var(--recy-ink);
+}
+
+/* ---------- 通用容器 ---------- */
+.page {
+  padding: 14px 18px 26px;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.page-title em {
+  margin-left: 8px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--recy-ink-soft);
+}
+
+.page-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.panel {
+  background: var(--recy-panel);
+  border: 1px solid var(--recy-line);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.panel-title::before {
+  content: "";
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--el-color-primary);
+}
+
+.muted {
+  color: var(--recy-ink-soft);
+  font-size: 12px;
+}
+
+.rule-tip {
+  margin: 0 0 10px;
+  padding: 7px 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #6d4c41;
+  background: #efebe9;
+  border-left: 3px solid var(--el-color-primary);
+  border-radius: 4px;
+}
+
+/* 数字统一等宽，卡片里跳个数不至于抖 */
+.num {
+  font-variant-numeric: tabular-nums;
+  font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+.sql-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: #6d4c41;
+  background: #efebe9;
+  border: 1px solid #d7ccc8;
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+/* ---------- 手绘表格（过磅明细行用，比 el-table 更像磅单） ---------- */
+.grid-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.grid-table th {
+  background: #efebe9;
+  color: #5d4037;
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--recy-line);
+  white-space: nowrap;
+}
+
+.grid-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #f1eae5;
+  vertical-align: middle;
+}
+
+.grid-table tfoot td {
+  background: #f7f4f2;
+  font-weight: 700;
+  border-bottom: 0;
+}
+
+.grid-table tr.is-empty td {
+  text-align: center;
+  color: var(--recy-ink-soft);
+  padding: 18px 0;
+}
