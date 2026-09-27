@@ -90,6 +90,68 @@ public final class StationDict {
     public static final List<String> REWEIGH_CLOSED_STATUSES =
             List.of("RELEASED", "APPROVED", "REJECTED");
 
+    // ---------------- 证照联锁台（模块七） ----------------
+
+    /** 证照主体类型：DRIVER 司机证照 / VEHICLE 车辆证照 */
+    private static final Map<String, String> CERT_SUBJECT = Map.of(
+            "DRIVER", "司机证照",
+            "VEHICLE", "车辆证照");
+
+    /** 司机证照类型 */
+    private static final Map<String, String> DRIVER_CERT_TYPE = Map.of(
+            "DRIVER_LICENSE", "驾驶证",
+            "QUALIFICATION", "道路运输从业人员资格证");
+
+    /** 车辆必需证照类型（派车时缺一不可） */
+    private static final Map<String, String> VEHICLE_CERT_TYPE = Map.of(
+            "ANNUAL_INSPECTION", "车辆年检",
+            "INSURANCE", "机动车保险",
+            "ROAD_TRANSPORT_PERMIT", "道路运输证");
+
+    /**
+     * 证照资料版本状态，完整生命周期：
+     * DRAFT 草稿 → AWAIT_REVIEW 待复核 → EFFECTIVE 生效（→ REVOKED 撤销 / EXPIRED 到期 /
+     * SUPERSEDED 被新版本替代）；待复核 → REJECTED 驳回。
+     */
+    private static final Map<String, String> CERT_STATUS = Map.of(
+            "DRAFT", "草稿",
+            "AWAIT_REVIEW", "待复核",
+            "EFFECTIVE", "生效",
+            "REJECTED", "驳回",
+            "REVOKED", "撤销",
+            "EXPIRED", "到期",
+            "SUPERSEDED", "被新版本替代");
+
+    private static final List<String> CERT_STATUS_ORDER =
+            List.of("DRAFT", "AWAIT_REVIEW", "EFFECTIVE", "REJECTED", "REVOKED", "EXPIRED", "SUPERSEDED");
+
+    /** 准驾车型等级：数字越大，准驾范围越广（高位覆盖低位，B2 覆盖 C1 不覆盖 C2） */
+    private static final Map<String, String> LICENSE_CLASS = Map.of(
+            "C2", "C2（小型自动挡）",
+            "C1", "C1（小型汽车）",
+            "B2", "B2（大型货车）",
+            "A2", "A2（牵引车）");
+
+    private static final List<String> LICENSE_CLASS_ORDER = List.of("C2", "C1", "B2", "A2");
+
+    /** 车辆必需证照类型（顺序固定，派车核对与快照装配都按它） */
+    public static final List<String> VEHICLE_REQUIRED_CERTS =
+            List.of("ANNUAL_INSPECTION", "INSURANCE", "ROAD_TRANSPORT_PERMIT");
+
+    /** 司机必需证照类型（顺序固定） */
+    public static final List<String> DRIVER_REQUIRED_CERTS =
+            List.of("DRIVER_LICENSE", "QUALIFICATION");
+
+    /** 证照轨迹事件中文名 */
+    private static final Map<String, String> CERT_EVENT_NAME = Map.of(
+            "CREATED", "录入草稿",
+            "SUBMITTED", "提交复核",
+            "APPROVED", "复核生效",
+            "REJECTED", "复核驳回",
+            "REVOKED", "撤销",
+            "EXPIRED", "到期",
+            "SUPERSEDED", "被新版本替代");
+
     // ---------------- 规则参数 ----------------
     /** 单个客户单日最多允许开几张过磅单 */
     public static final int MAX_TICKET_PER_CUSTOMER_DAY = 5;
@@ -208,5 +270,96 @@ public final class StationDict {
         }
         BigDecimal ratioCap = originNet.multiply(REWEIGH_DIFF_RATIO_LIMIT);
         return abs.compareTo(ratioCap) <= 0;
+    }
+
+    // ---------------- 证照联锁台取值方法（模块七） ----------------
+
+    public static String certSubjectName(String subjectType) {
+        return subjectType == null ? "" : CERT_SUBJECT.getOrDefault(subjectType, subjectType);
+    }
+
+    public static boolean isValidCertSubject(String subjectType) {
+        return subjectType != null && CERT_SUBJECT.containsKey(subjectType);
+    }
+
+    /** 证照类型中文名（司机 + 车辆两类合并查） */
+    public static String certTypeName(String certType) {
+        if (certType == null) {
+            return "";
+        }
+        String name = DRIVER_CERT_TYPE.get(certType);
+        return name != null ? name : VEHICLE_CERT_TYPE.getOrDefault(certType, certType);
+    }
+
+    /** 证照类型是否合法且与主体类型匹配 */
+    public static boolean isValidCertType(String subjectType, String certType) {
+        if (certType == null) {
+            return false;
+        }
+        if ("DRIVER".equals(subjectType)) {
+            return DRIVER_CERT_TYPE.containsKey(certType);
+        }
+        if ("VEHICLE".equals(subjectType)) {
+            return VEHICLE_CERT_TYPE.containsKey(certType);
+        }
+        return false;
+    }
+
+    public static List<String> driverCertTypes() {
+        return DRIVER_REQUIRED_CERTS;
+    }
+
+    public static List<String> vehicleCertTypes() {
+        return VEHICLE_REQUIRED_CERTS;
+    }
+
+    public static boolean isValidCertStatus(String status) {
+        return status != null && CERT_STATUS.containsKey(status);
+    }
+
+    public static String certStatusName(String status) {
+        return status == null ? "" : CERT_STATUS.getOrDefault(status, status);
+    }
+
+    public static List<String> certStatusOrder() {
+        return CERT_STATUS_ORDER;
+    }
+
+    public static String certEventName(String eventType) {
+        return eventType == null ? "" : CERT_EVENT_NAME.getOrDefault(eventType, eventType);
+    }
+
+    public static boolean isValidLicenseClass(String licenseClass) {
+        return licenseClass != null && LICENSE_CLASS.containsKey(licenseClass);
+    }
+
+    public static String licenseClassName(String licenseClass) {
+        return licenseClass == null ? "" : LICENSE_CLASS.getOrDefault(licenseClass, licenseClass);
+    }
+
+    public static List<String> licenseClassOrder() {
+        return LICENSE_CLASS_ORDER;
+    }
+
+    /**
+     * 准驾车型能否覆盖：驾驶证准驾等级 ≥ 车辆要求等级。
+     * C2 等级最低（不能开任何手动挡货车）；B2 覆盖 C1；A2 覆盖 B2/C1。
+     */
+    public static boolean licenseCovers(String driverLicenseClass, String requiredClass) {
+        int driverRank = LICENSE_CLASS_ORDER.indexOf(driverLicenseClass);
+        int requiredRank = LICENSE_CLASS_ORDER.indexOf(requiredClass);
+        return driverRank >= 0 && requiredRank >= 0 && driverRank >= requiredRank;
+    }
+
+    /** 按额定载重（吨）推导车辆要求的最低准驾车型 */
+    public static String requiredLicenseClass(BigDecimal loadCapacity) {
+        BigDecimal tons = loadCapacity == null ? BigDecimal.ZERO : loadCapacity;
+        if (tons.compareTo(BigDecimal.valueOf(10)) >= 0) {
+            return "A2";
+        }
+        if (tons.compareTo(BigDecimal.valueOf(4.5)) > 0) {
+            return "B2";
+        }
+        return "C1";
     }
 }

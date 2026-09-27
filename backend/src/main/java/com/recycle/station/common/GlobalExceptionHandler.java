@@ -27,13 +27,14 @@ public class GlobalExceptionHandler {
 
     /**
      * 乐观锁冲突：付款人员开着旧页面提交、或两条审核链路同时改判，
-     * 统一归类为"数据版本已变化"，提示刷新后重来。
+     * 统一归类为"数据版本已变化"，提示刷新后再操作。
+     * 证照联锁台的过期操作同样落这个码：消息里固定带"资料版本已变化"字样（题目硬要求）。
      */
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
     public ResponseEntity<ApiResponse<Void>> handleOptimistic(ObjectOptimisticLockingFailureException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.fail(BizException.VERSION_CONFLICT,
-                        "数据版本已变化：页面上的磅单 / 复称状态已被其他人更新，请刷新后再操作"));
+                        "资料版本已变化：页面上的证照 / 磅单 / 复称状态已被其他人更新，请刷新后再操作"));
     }
 
     /**
@@ -74,6 +75,19 @@ public class GlobalExceptionHandler {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(ApiResponse.fail(BizException.REWEIGH_IN_PROGRESS,
                             "复称正在处理中，请勿重复发起（相同请求已受理）"));
+        }
+        // 证照联锁台：同一组主体+证照类型只允许一份生效 / 一条待复核；
+        // 同一车辆只允许一条未结束出车。两个复核员并发处理新旧版本时由唯一索引兜底，
+        // 晚到的那一方只能得到"资料版本已变化"。
+        if (text.contains("uk_cert_effective_slot") || text.contains("uk_cert_pending_slot")) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ApiResponse.fail(BizException.CERT_VERSION_CHANGED,
+                            "资料版本已变化：该证照的生效 / 待复核版本刚被其他人更新，请刷新列表后再操作"));
+        }
+        if (text.contains("uk_trip_open")) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ApiResponse.fail(BizException.TRIP_OPEN_EXISTS,
+                            "车辆已有未结束出车，请先回场后再派车"));
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.fail(BizException.BIZ_INVALID, "存在唯一性约束冲突，请检查编号是否重复"));

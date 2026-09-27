@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 /**
  * 收运车辆与司机（车牌 + 司机 + 载重 + 状态 + 今日趟次）。
@@ -47,6 +48,15 @@ public class Vehicle {
 
     @Column(name = "remark", length = 100)
     private String remark;
+
+    /** 默认司机（driver.id）；派车弹窗预选，调度员仍可改选本次司机 */
+    @Column(name = "default_driver_id")
+    private Long defaultDriverId;
+
+    /** 派车 / 回场与证照撤销互斥的乐观锁：旧页面提交时据此得到"资料版本已变化" */
+    @Version
+    @Column(name = "lock_version", nullable = false)
+    private Long lockVersion;
 
     public Long getId() {
         return id;
@@ -118,5 +128,21 @@ public class Vehicle {
 
     public void setRemark(String remark) {
         this.remark = remark;
+    }
+
+    public Long getDefaultDriverId() {
+        return defaultDriverId;
+    }
+
+    public void setDefaultDriverId(Long defaultDriverId) {
+        this.defaultDriverId = defaultDriverId;
+    }
+
+    public Long getLockVersion() {
+        return lockVersion;
+    }
+
+    public void setLockVersion(Long lockVersion) {
+        this.lockVersion = lockVersion;
     }
 }

@@ -89,7 +89,89 @@ public final class Views {
 
     public record VehicleView(Long id, String plateNo, String driverName, String phone, BigDecimal loadCapacity,
                               String status, String statusName, LocalDate tripDate, Integer todayTrips,
-                              String remark, List<Map<String, String>> statusOptions) {
+                              String remark, List<Map<String, String>> statusOptions,
+                              Long defaultDriverId, String requiredLicenseClass, String requiredLicenseClassName,
+                              boolean dispatchable, List<Map<String, Object>> blockReasons,
+                              Long openTripId, String openTripStatus, String openTripStatusName,
+                              Long lockVersion) {
+    }
+
+    // ---------------- 模块七：证照联锁台 / 派车资格快照 ----------------
+
+    /** 司机视图 */
+    public record DriverView(Long id, String driverNo, String driverName, String phone,
+                             String status, String statusName, Long lockVersion) {
+    }
+
+    /** 证照轨迹 */
+    public record CertEventView(Long id, Long documentId, String eventType, String eventName,
+                                String fromStatus, String fromStatusName,
+                                String toStatus, String toStatusName,
+                                String operator, String note, LocalDateTime createdAt) {
+    }
+
+    /** 资料版本视图 */
+    public record CertDocumentView(Long id, Long seriesId, Integer versionNo,
+                                   String subjectType, String subjectTypeName,
+                                   Long subjectId, String subjectName,
+                                   String certType, String certTypeName,
+                                   String certNo, String licenseClass, String licenseClassName,
+                                   LocalDate validFrom, LocalDate validTo, String attachmentNote,
+                                   String operator, String reviewer,
+                                   String status, String statusName,
+                                   String rejectReason, String revokeReason,
+                                   LocalDateTime reviewedAt, LocalDateTime revokedAt, LocalDateTime expiredAt,
+                                   LocalDateTime createdAt, LocalDateTime updatedAt, Long lockVersion,
+                                   boolean currentEffective, List<CertEventView> events) {
+    }
+
+    /** 证照版本链视图（证照列表一行 = 一条链） */
+    public record CertSeriesView(Long id, String seriesNo,
+                                 String subjectType, String subjectTypeName,
+                                 Long subjectId, String subjectName,
+                                 String certType, String certTypeName,
+                                 Long currentDocumentId, Integer nextVersionNo,
+                                 boolean hasEffective, CertDocumentView current,
+                                 CertDocumentView pending,
+                                 List<CertDocumentView> documents,
+                                 List<Map<String, Object>> affectedTrips) {
+    }
+
+    /** 待复核队列项（资料版本 + 主体与证照信息冗余给队列直接展示） */
+    public record CertReviewQueueItem(Long documentId, Long seriesId, Integer versionNo,
+                                      String subjectType, String subjectTypeName,
+                                      String subjectName, String certType, String certTypeName,
+                                      String certNo, String licenseClass, String licenseClassName,
+                                      LocalDate validFrom, LocalDate validTo, String attachmentNote,
+                                      String operator, LocalDateTime createdAt, LocalDateTime updatedAt,
+                                      Long lockVersion, boolean selfOperated) {
+    }
+
+    /** 派车资格快照明细 */
+    public record TripCertView(Long id, Long seriesId, Long documentId,
+                               String subjectType, String subjectTypeName,
+                               String subjectName, String certType, String certTypeName,
+                               String certNo, String licenseClass, String licenseClassName,
+                               LocalDate validFrom, LocalDate validTo,
+                               Integer versionNo, String status, String statusName) {
+    }
+
+    /** 单次出车视图（含派车资格快照） */
+    public record DispatchTripView(Long id, String tripNo,
+                                   Long vehicleId, String plateNo,
+                                   Long driverId, String driverName,
+                                   String dispatchOperator,
+                                   LocalDateTime plannedReturnAt, LocalDateTime dispatchedAt,
+                                   LocalDateTime returnedAt, String status, String statusName,
+                                   String disposalReason, String dispositionNote, LocalDateTime dispositionAt,
+                                   Long lockVersion, List<TripCertView> certs) {
+    }
+
+    /** 派车预核对结果（不落数据）：通过时给出将要固化的资格快照清单 */
+    public record DispatchCheckView(boolean pass, List<Map<String, Object>> blockReasons,
+                                    Long vehicleId, String plateNo, Long driverId, String driverName,
+                                    String requiredLicenseClass, String driverLicenseClass,
+                                    LocalDateTime plannedReturnAt, List<TripCertView> snapshot) {
     }
 
     public record SettlementView(Long id, String settleNo, String ticketNo, String customerName, String payMode,

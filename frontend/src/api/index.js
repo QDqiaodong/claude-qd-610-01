@@ -50,11 +50,33 @@ export const ticketApi = {
   changeStatus: (ticketNo, status) => http.post(`/tickets/${ticketNo}/status`, { status })
 }
 
-/** 模块三：车辆与司机调度 */
+/** 模块三：车辆与司机调度（派车需带本次司机 + 计划回场，固化派车资格快照） */
 export const vehicleApi = {
   list: () => http.get('/vehicles'),
   create: (data) => http.post('/vehicles', data),
-  changeStatus: (id, status) => http.post(`/vehicles/${id}/status`, { status })
+  changeStatus: (id, status) => http.post(`/vehicles/${id}/status`, { status }),
+  dispatch: (data) => http.post('/vehicles/dispatch', data),
+  finishTrip: (data) => http.post('/vehicles/trips/return', data)
+}
+
+/** 模块七：证照有效期联锁台（司机证照 / 车辆证照版本链 + 派车资格） */
+export const certApi = {
+  drivers: (status) => http.get('/certs/drivers', { params: { status } }),
+  createDriver: (data) => http.post('/certs/drivers', data),
+  series: (subjectType) => http.get('/certs/series', { params: { subjectType } }),
+  seriesDetail: (id) => http.get(`/certs/series/${id}`),
+  reviewQueue: (currentReviewer) =>
+    http.get('/certs/review-queue', { params: { currentReviewer } }),
+  saveDraft: (data) => http.post('/certs/documents', data),
+  submit: (data) => http.post('/certs/documents/submit', data),
+  approve: (data) => http.post('/certs/documents/approve', data),
+  reject: (data) => http.post('/certs/documents/reject', data),
+  revoke: (data) => http.post('/certs/documents/revoke', data),
+  dispatchCheck: (data) => http.post('/certs/dispatch-check', data),
+  trips: (status) => http.get('/certs/trips', { params: { status } }),
+  tripDetail: (id) => http.get(`/certs/trips/${id}`),
+  vehicleTrips: (vehicleId) => http.get(`/certs/vehicles/${vehicleId}/trips`),
+  disposition: (id, data) => http.post(`/certs/trips/${id}/disposition`, data)
 }
 
 /** 模块四：结算单 */
