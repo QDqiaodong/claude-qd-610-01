@@ -29,11 +29,15 @@ public class GlobalExceptionHandler {
      * 乐观锁冲突：付款人员开着旧页面提交、或两条审核链路同时改判，
      * 统一归类为"数据版本已变化"，提示刷新后重来。
      */
+    /**
+     * 乐观锁冲突：旧页面提交、网络超时后重复操作、两名复核人同时改判新旧版本，
+     * 统一归类为"资料版本已变化"（磅单场景语义相同），提示刷新后重来。
+     */
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
     public ResponseEntity<ApiResponse<Void>> handleOptimistic(ObjectOptimisticLockingFailureException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.fail(BizException.VERSION_CONFLICT,
-                        "数据版本已变化：页面上的磅单 / 复称状态已被其他人更新，请刷新后再操作"));
+                        "资料版本已变化：页面上的证照 / 派车 / 磅单状态已被其他人更新，请刷新后再操作"));
     }
 
     /**
@@ -74,6 +78,11 @@ public class GlobalExceptionHandler {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(ApiResponse.fail(BizException.REWEIGH_IN_PROGRESS,
                             "复称正在处理中，请勿重复发起（相同请求已受理）"));
+        }
+        if (text.contains("uk_cred_active_slot")) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ApiResponse.fail(BizException.VERSION_CONFLICT,
+                            "资料版本已变化：该证照已有另一版本率先生效，系统只保留一份当前生效版本，请刷新后重试"));
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.fail(BizException.BIZ_INVALID, "存在唯一性约束冲突，请检查编号是否重复"));

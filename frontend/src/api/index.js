@@ -57,6 +57,36 @@ export const vehicleApi = {
   changeStatus: (id, status) => http.post(`/vehicles/${id}/status`, { status })
 }
 
+/** 模块七：证照有效期联锁台（司机证照 / 车辆证照） */
+export const credentialApi = {
+  drivers: () => http.get('/credentials/drivers'),
+  createDriver: (data) => http.post('/credentials/drivers', data),
+  updateDriver: (id, data) => http.post(`/credentials/drivers/${id}`, data),
+  docs: (ownerType, ownerId) =>
+    http.get('/credentials/docs', { params: ownerType ? { ownerType, ownerId } : {} }),
+  reviewQueue: () => http.get('/credentials/review-queue'),
+  group: (groupUuid) => http.get(`/credentials/groups/${groupUuid}`),
+  affectedTrips: (id) => http.get(`/credentials/docs/${id}/affected-trips`),
+  saveDraft: (data) => http.post('/credentials/docs', data),
+  updateDraft: (id, data) => http.post(`/credentials/docs/${id}`, data),
+  submit: (id, handler) => http.post(`/credentials/docs/${id}/submit`, { handler }),
+  approve: (id, reviewer, note) => http.post(`/credentials/docs/${id}/approve`, { reviewer, note }),
+  reject: (id, reviewer, reason) => http.post(`/credentials/docs/${id}/reject`, { reviewer, reason }),
+  revoke: (id, operator, reason) => http.post(`/credentials/docs/${id}/revoke`, { operator, reason })
+}
+
+/** 模块七：派车联锁 + 派车资格快照 */
+export const dispatchApi = {
+  board: () => http.get('/dispatch/board'),
+  check: (data) => http.post('/dispatch/check', data),
+  create: (data) => http.post('/dispatch/trips', data),
+  returnTrip: (id, operator, actualReturnAt) =>
+    http.post(`/dispatch/trips/${id}/return`, { operator, actualReturnAt }),
+  trip: (id) => http.get(`/dispatch/trips/${id}`),
+  trips: () => http.get('/dispatch/trips'),
+  onRoad: () => http.get('/dispatch/on-road')
+}
+
 /** 模块四：结算单 */
 export const settleApi = {
   list: () => http.get('/settlements'),

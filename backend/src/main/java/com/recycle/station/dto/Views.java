@@ -89,7 +89,93 @@ public final class Views {
 
     public record VehicleView(Long id, String plateNo, String driverName, String phone, BigDecimal loadCapacity,
                               String status, String statusName, LocalDate tripDate, Integer todayTrips,
-                              String remark, List<Map<String, String>> statusOptions) {
+                              String remark, List<Map<String, String>> statusOptions,
+                              String requiredLicenseClass, String requiredLicenseClassName,
+                              boolean pendingDispatch, String pendingDispatchReason, Long lockVersion) {
+    }
+
+    // ---------------- 模块七：证照联锁 + 派车快照 ----------------
+
+    public record DriverView(Long id, String driverName, String phone, String licenseClass,
+                             String licenseClassName, String status, String statusName, String remark) {
+    }
+
+    /** 证照列表中的一个版本（含状态中文名、证件类型中文名、经办人/复核人） */
+    public record CredentialDocView(Long id, String ownerType, Long ownerId, String ownerName, String docType,
+                                    String docTypeName, Integer versionNo, String groupUuid, String docNumber,
+                                    String licenseClass, String licenseClassName, String subjectDesc,
+                                    LocalDate validFrom, LocalDate validUntil, String attachmentNote,
+                                    String status, String statusName, String handler, String reviewer,
+                                    String reason, LocalDateTime createdAt, LocalDateTime submittedAt,
+                                    LocalDateTime reviewedAt, LocalDateTime closedAt, Long lockVersion,
+                                    boolean expiredByToday) {
+    }
+
+    /** 待复核队列一项：待办动作 + 是否本人经办（本人不能复核） */
+    public record ReviewQueueItem(CredentialDocView doc, String ownerType, Long ownerId, String ownerName,
+                                  String docTypeName, String handler, LocalDateTime submittedAt,
+                                  List<String> requiredTypes) {
+    }
+
+    /** 证照变化轨迹一条 */
+    public record CredentialEventView(Long id, Long docId, String action, String actionName,
+                                      String fromStatus, String fromStatusName, String toStatus, String toStatusName,
+                                      String operator, String reason, LocalDateTime createdAt) {
+    }
+
+    /** 新旧版本差异中单个字段的对比 */
+    public record DiffField(String field, String fieldName, String oldValue, String newValue, boolean changed) {
+    }
+
+    /** 一条版本链的全貌：全部版本 + 逐版差异 + 轨迹 */
+    public record CredentialGroupView(String ownerType, Long ownerId, String ownerName, String docType,
+                                      String docTypeName, String groupUuid,
+                                      List<CredentialDocView> versions, List<CredentialEventView> events,
+                                      List<Map<String, Object>> diffs) {
+    }
+
+    /** 派车资格快照中的一行（某次出车当时采用的某份证照版本） */
+    public record SnapshotLineView(Long docId, String ownerType, String ownerName, String docType,
+                                   String docTypeName, Integer docVersionNo, String docNumber,
+                                   String licenseClass, String licenseClassName, String subjectDesc,
+                                   LocalDate validFrom, LocalDate validUntil, String attachmentNote,
+                                   String handler, String reviewer) {
+    }
+
+    /** 单次出车 + 派车资格快照 */
+    public record TripView(Long id, String tripNo, Long vehicleId, String plateNo, Long driverId,
+                           String driverName, String driverLicenseClass, String driverLicenseClassName,
+                           String requiredLicenseClass, String requiredLicenseClassName,
+                           LocalDateTime dispatchedAt, LocalDateTime plannedReturnAt,
+                           LocalDateTime returnedAt, String status, String statusName,
+                           boolean pendingDispatch, String pendingReason, String dispatcher, String remark,
+                           List<SnapshotLineView> snapshots) {
+    }
+
+    /**
+     * 车辆当前可派状态（车辆列表直接展示不可派原因）：
+     * dispatchable=false 时 reasons 给出逐条人话 + 错误码（CRED_EXPIRED / LICENSE_CLASS_MISMATCH …）。
+     */
+    public record VehicleDispatchView(VehicleView vehicle, String requiredLicenseClass,
+                                      String requiredLicenseClassName, boolean dispatchable,
+                                      List<Map<String, Object>> reasons, Long openTripId,
+                                      String openTripNo, String openDriverName,
+                                      LocalDateTime plannedReturnAt, boolean pendingDispatch,
+                                      String pendingReason, Long lockVersion) {
+    }
+
+    /** 派车试算结果：联锁全部通过时返回将固化的快照清单，供确认弹窗核对 */
+    public record DispatchCheckView(boolean passable, List<Map<String, Object>> reasons,
+                                    Long vehicleId, String plateNo, Long driverId, String driverName,
+                                    String driverLicenseClass, String requiredLicenseClass,
+                                    LocalDateTime plannedReturnAt, List<SnapshotLineView> wouldFreeze) {
+    }
+
+    /** 撤销/换版时受影响的在途车辆 */
+    public record AffectedTripView(String tripNo, String plateNo, String driverName,
+                                   LocalDateTime dispatchedAt, LocalDateTime plannedReturnAt,
+                                   String docTypeName, Integer docVersionNo,
+                                   boolean pendingDispatch, String pendingReason) {
     }
 
     public record SettlementView(Long id, String settleNo, String ticketNo, String customerName, String payMode,

@@ -72,13 +72,20 @@ public class VehicleService {
         vehicle.setPhone(req.phone());
         vehicle.setLoadCapacity(req.loadCapacity());
         vehicle.setStatus(status);
+        // 按载重推定最低准驾车型（C1/B2/A2），证照联锁台按它核对司机驾驶证
+        vehicle.setRequiredLicenseClass(StationDict.requiredLicenseByLoad(req.loadCapacity()));
+        vehicle.setPendingDispatchFlag(false);
+        vehicle.setLockVersion(0L);
         vehicle.setTripDate(LocalDate.now());
         vehicle.setTodayTrips(0);
         vehicle.setRemark(req.remark());
         return toView(vehicleRepository.save(vehicle));
     }
 
-    /** 状态切换：在途回场时今日趟次 +1；维修中的车不能派出去 */
+    /**
+     * 状态切换：待命 ↔ 维修仍可直接改；待命 → 在途必须走派车确认（选司机 + 计划回场 +
+     * 证照联锁 + 资格快照），在途 → 待命必须走回场，禁止用旧的状态按钮绕过联锁。
+     */
     @Transactional
     public Views.VehicleView changeStatus(Long id, String target) {
         Vehicle vehicle = vehicleRepository.findById(id).orElseThrow(() -> new BizException("车辆不存在"));
@@ -89,6 +96,13 @@ public class VehicleService {
         if (current.equals(target)) {
             return toView(vehicle);
         }
+        if ("ON_ROAD".equals(target)) {
+            throw new BizException("车辆改为在途必须走【派车确认】：选定本次司机与计划回场时间，"
+                    + "系统核验证照有效期并固化派车资格快照");
+        }
+        if ("ON_ROAD".equals(current) && "IDLE".equals(target)) {
+            throw new BizException("在途车辆回场必须走【回场登记】，以结束本次出车并核对派车资格快照");
+        }
         if ("REPAIR".equals(current) && "ON_ROAD".equals(target)) {
             throw new BizException("维修中的车不能直接派出去跑车，请先改回待命");
         }
@@ -96,9 +110,6 @@ public class VehicleService {
         if (vehicle.getTripDate() == null || !today.equals(vehicle.getTripDate())) {
             vehicle.setTripDate(today);
             vehicle.setTodayTrips(0);
-        }
-        if ("ON_ROAD".equals(current) && "IDLE".equals(target)) {
-            vehicle.setTodayTrips(vehicle.getTodayTrips() + 1);
         }
         vehicle.setStatus(target);
         return toView(vehicleRepository.save(vehicle));
@@ -114,9 +125,15 @@ public class VehicleService {
         for (String status : StationDict.vehicleStatusOrder()) {
             options.add(Map.of("value", status, "label", StationDict.vehicleStatusName(status)));
         }
+        String requiredClass = vehicle.getRequiredLicenseClass() == null
+                ? StationDict.requiredLicenseByLoad(vehicle.getLoadCapacity())
+                : vehicle.getRequiredLicenseClass();
         return new Views.VehicleView(vehicle.getId(), vehicle.getPlateNo(), vehicle.getDriverName(),
                 vehicle.getPhone(), vehicle.getLoadCapacity(), vehicle.getStatus(),
                 StationDict.vehicleStatusName(vehicle.getStatus()), vehicle.getTripDate(),
-                vehicle.getTodayTrips(), vehicle.getRemark(), options);
+                vehicle.getTodayTrips(), vehicle.getRemark(), options,
+                requiredClass, StationDict.licenseClassName(requiredClass),
+                Boolean.TRUE.equals(vehicle.getPendingDispatchFlag()),
+                vehicle.getPendingDispatchReason(), vehicle.getLockVersion());
     }
 }

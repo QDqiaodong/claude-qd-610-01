@@ -46,6 +46,67 @@ public final class StationDict {
 
     private static final List<String> VEHICLE_STATUS_ORDER = List.of("IDLE", "ON_ROAD", "REPAIR");
 
+    // ---------------- 准驾车型（证照有效期联锁台） ----------------
+    /** 准驾车型由低到高：高级别覆盖低级别（A1 覆盖全部货车口径） */
+    private static final List<String> LICENSE_CLASS_ORDER = List.of("C1", "B2", "A2", "A1");
+
+    private static final Map<String, String> LICENSE_CLASS_NAME = Map.of(
+            "C1", "C1 小型货车",
+            "B2", "B2 大型货车",
+            "A2", "A2 牵引车",
+            "A1", "A1 大型客车/重型");
+
+    // ---------------- 证照类型 ----------------
+    private static final Map<String, String> CREDENTIAL_TYPE = Map.of(
+            "CRED_DRIVER_LICENSE", "驾驶证",
+            "CRED_QUALIFICATION", "货运从业资格证",
+            "CRED_ANNUAL_INSPECTION", "车辆年检",
+            "CRED_INSURANCE", "机动车交强险",
+            "CRED_TRANSPORT_PERMIT", "道路运输证");
+
+    /** 司机必需证照（每次派车都必须在计划回场前持续有效） */
+    public static final List<String> DRIVER_REQUIRED_DOCS =
+            List.of("CRED_DRIVER_LICENSE", "CRED_QUALIFICATION");
+
+    /** 车辆全部必需证照 */
+    public static final List<String> VEHICLE_REQUIRED_DOCS =
+            List.of("CRED_ANNUAL_INSPECTION", "CRED_INSURANCE", "CRED_TRANSPORT_PERMIT");
+
+    // ---------------- 证照版本状态 ----------------
+    private static final Map<String, String> CREDENTIAL_STATUS = Map.of(
+            "DRAFT", "草稿",
+            "PENDING_REVIEW", "待复核",
+            "EFFECTIVE", "生效",
+            "REJECTED", "驳回",
+            "REVOKED", "撤销",
+            "EXPIRED", "到期",
+            "SUPERSEDED", "被新版本替代");
+
+    /** 版本状态轨迹顺序（列表/轨迹展示） */
+    public static final List<String> CREDENTIAL_STATUS_ORDER =
+            List.of("DRAFT", "PENDING_REVIEW", "EFFECTIVE", "REJECTED", "REVOKED", "EXPIRED", "SUPERSEDED");
+
+    /** 证照变化轨迹动作 → 中文 */
+    private static final Map<String, String> CREDENTIAL_ACTION_NAME = Map.of(
+            "CREATE", "录入草稿",
+            "SUBMIT", "提交复核",
+            "APPROVE", "复核生效",
+            "REJECT", "驳回",
+            "REVOKE", "撤销",
+            "EXPIRE", "到期",
+            "SUPERSEDE", "被新版本替代");
+
+    // ---------------- 司机状态 ----------------
+    private static final Map<String, String> DRIVER_STATUS = Map.of(
+            "ACTIVE", "在岗",
+            "RESTING", "休息",
+            "RESIGNED", "离职");
+
+    // ---------------- 出车状态 ----------------
+    private static final Map<String, String> TRIP_STATUS = Map.of(
+            "ON_ROAD", "在途",
+            "RETURNED", "已回场");
+
     // ---------------- 结算方式 ----------------
     private static final Map<String, String> PAY_MODE = Map.of(
             "CASH", "现金",
@@ -156,6 +217,86 @@ public final class StationDict {
 
     public static List<String> vehicleStatusOrder() {
         return VEHICLE_STATUS_ORDER;
+    }
+
+    // ---------------- 准驾车型取值方法 ----------------
+
+    public static boolean isValidLicenseClass(String licenseClass) {
+        return licenseClass != null && LICENSE_CLASS_NAME.containsKey(licenseClass);
+    }
+
+    public static String licenseClassName(String licenseClass) {
+        return licenseClass == null ? "" : LICENSE_CLASS_NAME.getOrDefault(licenseClass, licenseClass);
+    }
+
+    public static List<String> licenseClassOrder() {
+        return LICENSE_CLASS_ORDER;
+    }
+
+    /**
+     * 准驾覆盖：driverClass 的等级 ≥ requiredClass 才算覆盖（A2 可开 B2/C1 要求的车）。
+     * 这是“司机准驾车型能覆盖该车辆”的唯一判定口径。
+     */
+    public static boolean licenseCovers(String driverClass, String requiredClass) {
+        int driverRank = LICENSE_CLASS_ORDER.indexOf(driverClass);
+        int requiredRank = LICENSE_CLASS_ORDER.indexOf(requiredClass);
+        return driverRank >= 0 && requiredRank >= 0 && driverRank >= requiredRank;
+    }
+
+    /** 按载重推定车辆所需最低准驾车型：≤4.5 吨 C1，≤12 吨 B2，其余 A2 */
+    public static String requiredLicenseByLoad(BigDecimal loadCapacity) {
+        if (loadCapacity == null) {
+            return "B2";
+        }
+        if (loadCapacity.compareTo(BigDecimal.valueOf(4.5)) <= 0) {
+            return "C1";
+        }
+        if (loadCapacity.compareTo(BigDecimal.valueOf(12)) <= 0) {
+            return "B2";
+        }
+        return "A2";
+    }
+
+    // ---------------- 证照取值方法 ----------------
+
+    public static boolean isValidCredentialType(String docType) {
+        return docType != null && CREDENTIAL_TYPE.containsKey(docType);
+    }
+
+    public static String credentialTypeName(String docType) {
+        return docType == null ? "" : CREDENTIAL_TYPE.getOrDefault(docType, docType);
+    }
+
+    public static boolean isDriverCredential(String docType) {
+        return DRIVER_REQUIRED_DOCS.contains(docType);
+    }
+
+    public static List<String> requiredCredentialTypes(String ownerType) {
+        return "DRIVER".equals(ownerType) ? DRIVER_REQUIRED_DOCS : VEHICLE_REQUIRED_DOCS;
+    }
+
+    public static boolean isValidCredentialStatus(String status) {
+        return status != null && CREDENTIAL_STATUS.containsKey(status);
+    }
+
+    public static String credentialStatusName(String status) {
+        return status == null ? "" : CREDENTIAL_STATUS.getOrDefault(status, status);
+    }
+
+    public static String credentialActionName(String action) {
+        return action == null ? "" : CREDENTIAL_ACTION_NAME.getOrDefault(action, action);
+    }
+
+    public static boolean isValidDriverStatus(String status) {
+        return status != null && DRIVER_STATUS.containsKey(status);
+    }
+
+    public static String driverStatusName(String status) {
+        return status == null ? "" : DRIVER_STATUS.getOrDefault(status, status);
+    }
+
+    public static String tripStatusName(String status) {
+        return status == null ? "" : TRIP_STATUS.getOrDefault(status, status);
     }
 
     public static boolean isValidPayMode(String mode) {

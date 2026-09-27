@@ -138,4 +138,93 @@ public final class Reqs {
             @NotBlank(message = "操作人不能为空") String operator,
             String reason) {
     }
+
+    // ---------------- 模块七：证照有效期联锁台 + 派车资格快照 ----------------
+
+    /** 司机花名册建档 */
+    public record DriverSaveReq(
+            @NotBlank(message = "司机姓名不能为空") String driverName,
+            String phone,
+            String licenseClass,
+            String status,
+            String remark) {
+    }
+
+    /**
+     * 录入一份证照草稿（新版本）。
+     * ownerType=DRIVER 时 ownerId 为司机；=VEHICLE 时为车辆。
+     * basedOnId 不为空表示“在某旧版本基础上换版”（自动挂同一条版本链）。
+     */
+    public record CredentialSaveReq(
+            @NotBlank(message = "证照归属类型不能为空") String ownerType,
+            @NotNull(message = "证照归属对象不能为空") Long ownerId,
+            @NotBlank(message = "证件类型不能为空") String docType,
+            @NotBlank(message = "证件号码不能为空") String docNumber,
+            String licenseClass,
+            String subjectDesc,
+            @NotBlank(message = "有效期起不能为空") String validFrom,
+            @NotBlank(message = "有效期止不能为空") String validUntil,
+            String attachmentNote,
+            @NotBlank(message = "经办人不能为空") String handler,
+            Long basedOnId,
+            String remark) {
+    }
+
+    /** 草稿/驳回版本再次编辑后保存 */
+    public record CredentialUpdateReq(
+            @NotBlank(message = "证件号码不能为空") String docNumber,
+            String licenseClass,
+            String subjectDesc,
+            @NotBlank(message = "有效期起不能为空") String validFrom,
+            @NotBlank(message = "有效期止不能为空") String validUntil,
+            String attachmentNote) {
+    }
+
+    /** 草稿/驳回版本提交复核 */
+    public record CredentialSubmitReq(
+            @NotBlank(message = "经办人不能为空") String handler) {
+    }
+
+    /** 复核通过：复核人不得是经办人 */
+    public record CredentialApproveReq(
+            @NotBlank(message = "复核人不能为空") String reviewer,
+            String note) {
+    }
+
+    /** 复核驳回：原因必填 */
+    public record CredentialRejectReq(
+            @NotBlank(message = "复核人不能为空") String reviewer,
+            @NotBlank(message = "驳回原因不能为空") @Size(max = 200, message = "驳回原因不超过 200 字") String reason) {
+    }
+
+    /** 撤销生效资料：原因必填，且要回查在途车辆做待调度处置 */
+    public record CredentialRevokeReq(
+            @NotBlank(message = "操作人不能为空") String operator,
+            @NotBlank(message = "撤销原因不能为空") @Size(max = 200, message = "撤销原因不超过 200 字") String reason) {
+    }
+
+    /** 派车前试算（不真正落库）：选司机 + 计划回场，后端返回将固化的快照与联锁结论 */
+    public record DispatchCheckReq(
+            @NotNull(message = "车辆不能为空") Long vehicleId,
+            @NotNull(message = "本次司机不能为空") Long driverId,
+            @NotBlank(message = "计划回场时间不能为空") String plannedReturnAt) {
+    }
+
+    /** 派车确认：车辆 待命→在途，必须选定本次司机与计划回场时间 */
+    public record DispatchCreateReq(
+            @NotNull(message = "车辆不能为空") Long vehicleId,
+            @NotNull(message = "本次司机不能为空") Long driverId,
+            @NotBlank(message = "计划回场时间不能为空") String plannedReturnAt,
+            @NotBlank(message = "调度员不能为空") String dispatcher,
+            /** 打开派车弹窗时看到的车辆行版本，过期提交统一回“资料版本已变化” */
+            Long expectedVehicleVersion,
+            String remark) {
+    }
+
+    /** 在途回场 */
+    public record DispatchReturnReq(
+            @NotBlank(message = "确认人不能为空") String operator,
+            String actualReturnAt) {
+    }
 }
+
